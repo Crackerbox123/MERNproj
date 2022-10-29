@@ -2,14 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Jumbotron, Container, Col, Form, Button, Card, CardColumns } from 'react-bootstrap';
 
 import Auth from '../utils/auth';
-import { saveBook, searchGoogleBooks } from '../utils/API';
+// import { searchGoogleBooks } from '../utils/API';
 import { saveBookIds, getSavedBookIds } from '../utils/localStorage';
 
+import { useMutation } from '@apollo/client';
+import { SAVE_BOOK } from '../utils/mutations';
+
 const SearchBooks = () => {
+  
   // create state for holding returned google api data
   const [searchedBooks, setSearchedBooks] = useState([]);
   // create state for holding our search field data
   const [searchInput, setSearchInput] = useState('');
+
+  const [saveBook, { error }] = useMutation(SAVE_BOOK);
 
   // create state to hold saved bookId values
   const [savedBookIds, setSavedBookIds] = useState(getSavedBookIds());
@@ -29,7 +35,10 @@ const SearchBooks = () => {
     }
 
     try {
-      const response = await searchGoogleBooks(searchInput);
+      // const response = await searchGoogleBooks(searchInput);
+      const response = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${searchInput}`
+      );
 
       if (!response.ok) {
         throw new Error('something went wrong!');
@@ -52,22 +61,31 @@ const SearchBooks = () => {
     }
   };
 
+  // * Use the Apollo `useMutation()` Hook to execute the `SAVE_BOOK` mutation in the `handleSaveBook()` function instead of the `saveBook()` function imported from the `API` file.
+
+  // * Make sure you keep the logic for saving the book's ID to state in the `try...catch` block! 
+
   // create function to handle saving a book to our database
+
   const handleSaveBook = async (bookId) => {
+    console.log("BOOKID", bookId); //WORKS
+
     // find the book in `searchedBooks` state by the matching id
     const bookToSave = searchedBooks.find((book) => book.bookId === bookId);
-
+    console.log("BOOKTOSAVE", bookToSave);
     // get token
     const token = Auth.loggedIn() ? Auth.getToken() : null;
-
+    console.log("TOKEN", token);//WORKS
     if (!token) {
       return false;
     }
 
     try {
-      const response = await saveBook(bookToSave, token);
-
-      if (!response.ok) {
+      console.log("TRY TEST");//WORKS
+      // const response = await saveBook(bookToSave, token);
+      const { data } = await saveBook({ variables: { newBook: { ...bookToSave } }});
+      console.log("DATA2", data);
+      if (!data.ok) {
         throw new Error('something went wrong!');
       }
 
